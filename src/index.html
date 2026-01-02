@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI-powered Korean-English translator with custom rules and translation profiles">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>Korean↔English Translator</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/styles/main.css">
+</head>
+
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <h1 class="logo">
+          <span class="logo-icon">🇰🇷</span>
+          <span class="logo-text">Translator</span>
+          <span class="logo-icon">🇺🇸</span>
+        </h1>
+      </div>
+
+      <div class="header-center">
+        <div class="profile-selector">
+          <label for="profile-select">Profile:</label>
+          <select id="profile-select">
+            <option value="natural">Natural</option>
+            <option value="parent-talk">Parent Talk</option>
+            <option value="direct">Direct</option>
+          </select>
+          <button id="manage-profiles-btn" class="btn btn-icon" title="Manage Profiles">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path
+                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+              </path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="api-status" id="api-status">
+          <span class="status-dot"></span>
+          <span class="status-text">Checking...</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content - Three Panels -->
+    <main class="panels">
+      <!-- Left Panel: Input -->
+      <section class="panel panel-input">
+        <div class="panel-header">
+          <h2>Original Text</h2>
+          <span class="language-badge" id="source-lang">Auto-detect</span>
+        </div>
+        <div class="panel-content">
+          <textarea id="input-text" placeholder="Enter Korean or English text to translate..." autofocus></textarea>
+        </div>
+        <div class="panel-footer">
+          <span class="char-count"><span id="char-count">0</span> characters</span>
+          <button id="clear-btn" class="btn btn-ghost">Clear</button>
+        </div>
+      </section>
+
+      <!-- Middle Panel: AI Translation -->
+      <section class="panel panel-translation">
+        <div class="panel-header">
+          <h2>AI Translation</h2>
+          <span class="language-badge" id="target-lang">—</span>
+        </div>
+        <div class="panel-content">
+          <div id="translation-output" class="translation-text" contenteditable="false">
+            <p class="placeholder">Translation will appear here...</p>
+          </div>
+          <div id="translation-notes" class="translation-notes hidden"></div>
+        </div>
+        <div class="panel-footer">
+          <div class="action-buttons">
+            <button id="copy-btn" class="btn btn-primary" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copy
+            </button>
+            <button id="variation-btn" class="btn btn-secondary" disabled>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4">
+                </path>
+              </svg>
+              Variation
+            </button>
+          </div>
+          <div class="profile-badge" id="profile-badge">Using: Natural</div>
+        </div>
+      </section>
+
+      <!-- Right Panel: Re-translation Validation -->
+      <section class="panel panel-validation">
+        <div class="panel-header">
+          <h2>Back-Translation</h2>
+          <div class="accuracy-score" id="accuracy-score">
+            <span class="score-label">Accuracy:</span>
+            <span class="score-value">—</span>
+          </div>
+        </div>
+        <div class="panel-content">
+          <div id="retranslation-output" class="translation-text">
+            <p class="placeholder">Direct re-translation for validation...</p>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <p class="validation-hint" id="accuracy-explanation">
+            Compare with your original to check for meaning loss
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Alternatives Popup -->
+    <div id="alternatives-popup" class="alternatives-popup hidden">
+      <div class="popup-header">
+        <h3>Alternative Translations</h3>
+        <button class="popup-close" id="close-popup">&times;</button>
+      </div>
+      <div class="popup-content" id="alternatives-list">
+        <!-- Alternatives will be inserted here -->
+      </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Manage Profiles</h2>
+          <button class="modal-close" id="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="profiles-list" id="profiles-list">
+            <!-- Profiles will be inserted here -->
+          </div>
+          <div class="profile-form">
+            <h3 id="form-title">Create New Profile</h3>
+            <input type="hidden" id="profile-id">
+            <div class="form-group">
+              <label for="profile-name">Name</label>
+              <input type="text" id="profile-name" placeholder="My Custom Profile">
+            </div>
+            <div class="form-group">
+              <label for="profile-description">Description</label>
+              <textarea id="profile-description" placeholder="Describe how this profile should translate..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Rules</label>
+              <div id="rules-list" class="rules-list">
+                <!-- Rules will be inserted here -->
+              </div>
+              <button id="add-rule-btn" class="btn btn-ghost btn-small">+ Add Rule</button>
+            </div>
+            <div class="form-actions">
+              <button id="save-profile-btn" class="btn btn-primary">Save Profile</button>
+              <button id="cancel-profile-btn" class="btn btn-ghost">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+      <div class="loading-spinner"></div>
+      <p>Translating...</p>
+    </div>
+  </div>
+
+  <script type="module" src="/js/app.js"></script>
+  <script>
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+
+</html>
