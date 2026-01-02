@@ -73,7 +73,9 @@ export async function translateText(text, profileId = 'natural', customRules = [
         const translatedText = translationResult.text;
 
         // Back-Translation using DeepL
-        const backTarget = sourceLanguage === 'ko' ? 'en-US' : 'ko';
+        // We want to translate the RESULT back to the SOURCE language to verify accuracy
+        // So if source was 'en', we translate back to 'en-US'. If source was 'ko', back to 'ko'.
+        const backTarget = sourceLanguage === 'ko' ? 'ko' : 'en-US';
         const backTranslationResult = await translator.translateText(translatedText, null, backTarget);
         const backTranslatedText = backTranslationResult.text;
 
