@@ -55,6 +55,7 @@ npm run dev
    - Connect your GitHub repo
    - Render auto-detects settings from `render.yaml`
    - Add environment variable: `GEMINI_API_KEY` = your key
+   - Add environment variable: `DEEPL_API_KEY` = your key (Get one [here](https://www.deepl.com/pro-api))
    - Click "Create Web Service"
 
 3. **Access your app** at `https://your-app-name.onrender.com`
@@ -87,7 +88,8 @@ korean-parent-translator/
 
 - **Frontend**: Vanilla JS + Vite (PWA)
 - **Backend**: Express.js
-- **AI**: Google Gemini 2.5 Flash
+- **Translation Engine**: DeepL API
+- **AI Features**: Google Gemini 1.5 Pro
 - **Hosting**: Render (free tier)
 
 ## License
