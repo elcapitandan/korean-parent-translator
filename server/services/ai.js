@@ -22,6 +22,10 @@ function getGenAI() {
 
 function getDeepL() {
     if (!deeplTranslator) {
+        console.log('Initializing DeepL...');
+        console.log('CWD:', process.cwd());
+        console.log('DEEPL_API_KEY env var:', process.env.DEEPL_API_KEY ? 'Present' : 'Missing');
+
         const apiKey = process.env.DEEPL_API_KEY || '';
         if (!apiKey) {
             console.warn('DeepL API Key is missing!');
