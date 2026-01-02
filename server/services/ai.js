@@ -76,9 +76,21 @@ export async function translateText(text, profileId = 'natural', customRules = [
     }
 
     // Get direct re-translation for validation
+    // Get re-translation for validation (Literal but Natural)
     const targetLanguage = sourceLanguage === 'ko' ? 'en' : 'ko';
-    const directProfile = DEFAULT_PROFILES.find(p => p.id === 'direct');
-    const reTranslatePrompt = buildTranslationPrompt(mainTranslation.translation, directProfile, targetLanguage);
+
+    // Use a custom profile for back-translation to ensure it sounds natural in English
+    const validationProfile = {
+        description: 'Provide a natural translation that preserves the exact meaning but sounds like a native speaker',
+        rules: [
+            'Avoid robotic or awkwardly literal translations (e.g., translate "badatga" as "beach", not "sea\'s edge")',
+            'Use natural phrasing that a native speaker would actually say',
+            'Preserve the original intent and tone',
+            'Do not add new information, but do not be afraid to rearrange structure for natural flow'
+        ]
+    };
+
+    const reTranslatePrompt = buildTranslationPrompt(mainTranslation.translation, validationProfile, targetLanguage);
     const reResult = await model.generateContent(reTranslatePrompt);
     const reResponse = reResult.response.text();
 
