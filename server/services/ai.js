@@ -22,10 +22,6 @@ function getGenAI() {
 
 function getDeepL() {
     if (!deeplTranslator) {
-        console.log('Initializing DeepL...');
-        console.log('CWD:', process.cwd());
-        console.log('DEEPL_API_KEY env var:', process.env.DEEPL_API_KEY ? 'Present' : 'Missing');
-
         const apiKey = process.env.DEEPL_API_KEY || '';
         if (!apiKey) {
             console.warn('DeepL API Key is missing!');
@@ -81,8 +77,15 @@ export async function translateText(text, profileId = 'natural', customRules = [
         const backTranslationResult = await translator.translateText(translatedText, null, backTarget);
         const backTranslatedText = backTranslationResult.text;
 
-        // Calculate accuracy score using Gemini (Pro)
-        const accuracyScore = await calculateAccuracyScore(text, backTranslatedText, sourceLanguage);
+        // Calculate accuracy score using Gemini
+        // We make this non-blocking so main translation succeeds even if Gemini fails (quota/errors)
+        let accuracyScore = null;
+        try {
+            accuracyScore = await calculateAccuracyScore(text, backTranslatedText, sourceLanguage);
+        } catch (scoreError) {
+            console.warn('Accuracy scoring failed:', scoreError.message);
+            accuracyScore = { score: 0, explanation: 'Scoring temporarily unavailable' };
+        }
 
         return {
             original: text,
@@ -99,13 +102,15 @@ export async function translateText(text, profileId = 'natural', customRules = [
 
     } catch (error) {
         console.error('DeepL Translation Error:', error);
-        // Fallback or rethrow
         throw new Error(`DeepL Error: ${error.message}`);
     }
 }
 
 // Calculate semantic similarity between original and re-translation using Gemini
 async function calculateAccuracyScore(original, reTranslation, language) {
+    // Try gemini-1.5-flash for speed/cost, fallback to pro if needed
+    // Changing to gemini-1.5-flash as it is generally more available on free tier for high volume
+    // But user requested "Lateast Model". gemini-1.5-pro is latest stable.
     const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
 
     const prompt = `Compare these two texts for semantic similarity. Rate from 0-100 how much meaning is preserved.
