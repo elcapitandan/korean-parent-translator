@@ -8,22 +8,22 @@
   --bg-tertiary: #1c1c35;
   --bg-panel: rgba(28, 28, 53, 0.7);
   --bg-glass: rgba(255, 255, 255, 0.03);
-  
+
   --text-primary: #f0f0f5;
   --text-secondary: #a0a0b0;
   --text-muted: #606070;
-  
+
   --accent-primary: #6366f1;
   --accent-secondary: #8b5cf6;
   --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
-  
+
   --korean-red: #cd2e3a;
   --korean-blue: #0047a0;
-  
+
   --success: #22c55e;
   --warning: #f59e0b;
   --error: #ef4444;
-  
+
   /* Spacing */
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
@@ -31,7 +31,7 @@
   --space-lg: 1.5rem;
   --space-xl: 2rem;
   --space-2xl: 3rem;
-  
+
   /* Typography */
   --font-sans: 'Inter', 'Noto Sans KR', system-ui, -apple-system, sans-serif;
   --font-size-xs: 0.75rem;
@@ -40,23 +40,23 @@
   --font-size-lg: 1.125rem;
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
-  
+
   /* Borders & Radius */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
   --radius-full: 9999px;
-  
+
   --border-color: rgba(255, 255, 255, 0.08);
   --border-hover: rgba(255, 255, 255, 0.15);
-  
+
   /* Shadows */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
   --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.3);
-  
+
   /* Transitions */
   --transition-fast: 150ms ease;
   --transition-base: 250ms ease;
@@ -66,7 +66,9 @@
 /* ================================
    Reset & Base Styles
    ================================ */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -95,7 +97,7 @@ body::before {
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
+  background:
     radial-gradient(ellipse at 20% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 50%, rgba(217, 70, 239, 0.05) 0%, transparent 60%);
@@ -104,8 +106,15 @@ body::before {
 }
 
 @keyframes bgPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* ================================
@@ -223,8 +232,15 @@ body::before {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* ================================
@@ -510,6 +526,7 @@ body::before {
     opacity: 0;
     transform: scale(0.95) translateY(-5px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -614,6 +631,7 @@ body::before {
     opacity: 0;
     transform: scale(0.95);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
@@ -797,12 +815,34 @@ body::before {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-overlay p {
   font-size: var(--font-size-lg);
   color: var(--text-secondary);
+}
+
+/* Panel Loading (inline in translation panel) */
+.panel-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  color: var(--text-secondary);
+}
+
+.loading-spinner-small {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 /* ================================
@@ -812,7 +852,7 @@ body::before {
   .panels {
     grid-template-columns: 1fr 1fr;
   }
-  
+
   .panel-validation {
     grid-column: 1 / -1;
   }
@@ -822,13 +862,13 @@ body::before {
   .app {
     padding: var(--space-sm);
   }
-  
+
   .header {
     flex-direction: column;
     gap: var(--space-md);
     text-align: center;
   }
-  
+
   .header-left,
   .header-center,
   .header-right {
@@ -836,20 +876,20 @@ body::before {
     width: 100%;
     justify-content: center;
   }
-  
+
   .panels {
     grid-template-columns: 1fr;
     gap: var(--space-md);
   }
-  
+
   .panel-content {
     padding: var(--space-md);
   }
-  
+
   .panel-input textarea {
     min-height: 150px;
   }
-  
+
   .action-buttons {
     flex-wrap: wrap;
   }

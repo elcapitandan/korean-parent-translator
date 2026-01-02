@@ -352,9 +352,16 @@ function clearTranslation() {
     elements.variationBtn.disabled = true;
 }
 
-// Show/hide loading overlay
+// Show/hide loading in translation panel only
 function showLoading(show) {
-    elements.loadingOverlay.classList.toggle('hidden', !show);
+    if (show) {
+        elements.translationOutput.innerHTML = `
+            <div class="panel-loading">
+                <div class="loading-spinner-small"></div>
+                <span>Translating...</span>
+            </div>
+        `;
+    }
 }
 
 // Start the app
