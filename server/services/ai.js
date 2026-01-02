@@ -172,18 +172,24 @@ export async function generateVariation(originalText, currentTranslation, profil
     const model = getGenAI().getGenerativeModel({ model: 'gemini-2.5-flash' });
     const profile = getProfileById(profileId) || DEFAULT_PROFILES[0];
     const sourceLanguage = detectLanguage(originalText);
+    const targetLanguage = sourceLanguage === 'ko' ? 'English' : 'Korean';
 
     const prompt = `Original text: "${originalText}"
 Current translation: "${currentTranslation}"
+Target language: ${targetLanguage}
 Style: ${profile.description}
 
-Generate a DIFFERENT translation that:
-1. Preserves the same meaning
-2. Uses different word choices or phrasing
-3. Follows the same style guidelines
+Generate a DIFFERENT translation that incorporates:
+1. Common ${targetLanguage} idioms, proverbs, or sayings that fit the context
+2. Natural expressions that native speakers would actually use
+3. Cultural nuances and colloquialisms
+4. If translating to Korean: consider 사자성어 (four-character idioms), 속담 (proverbs), or common expressions like 화이팅, 수고하셨습니다, etc.
+5. If translating to English: use equivalent English idioms or casual expressions
+
+The variation should feel MORE natural and culturally authentic than a direct translation.
 
 Respond with ONLY a JSON object:
-{"translation": "the new translation", "difference": "what's different about this version"}`;
+{"translation": "the new translation using idioms/common phrases", "difference": "explain the idiom/phrase used and its cultural meaning"}`;
 
     const result = await model.generateContent(prompt);
     const response = result.response.text();
