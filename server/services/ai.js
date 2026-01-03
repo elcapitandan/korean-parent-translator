@@ -234,12 +234,14 @@ Respond with ONLY a JSON array:
 
 // Generate a different variation using Gemini
 export async function generateVariation(originalText, currentTranslation, profileId) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
     const profile = getProfileById(profileId) || DEFAULT_PROFILES[0];
     const sourceLanguage = detectLanguage(originalText);
     const targetLanguage = sourceLanguage === 'ko' ? 'English' : 'Korean';
 
-    const prompt = `Original text: "${originalText}"
+    try {
+        const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
+
+        const prompt = `Original text: "${originalText}"
 Current translation: "${currentTranslation}"
 Target language: ${targetLanguage}
 Style: ${profile.description}
@@ -256,13 +258,21 @@ The variation should feel MORE natural and culturally authentic than a direct tr
 Respond with ONLY a JSON object:
 {"translation": "the new translation using idioms/common phrases", "difference": "explain the idiom/phrase used and its cultural meaning"}`;
 
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
+        const result = await model.generateContent(prompt);
+        const response = result.response.text();
 
-    try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        return JSON.parse(jsonMatch ? jsonMatch[0] : response);
-    } catch {
-        return { translation: currentTranslation, difference: 'Could not generate variation' };
+        try {
+            const jsonMatch = response.match(/\{[\s\S]*\}/);
+            return JSON.parse(jsonMatch ? jsonMatch[0] : response);
+        } catch {
+            return { translation: currentTranslation, difference: 'Could not parse variation' };
+        }
+    } catch (error) {
+        console.error('Gemini Variation Error:', error.message);
+        // Return a fallback instead of throwing
+        return {
+            translation: currentTranslation,
+            difference: `Variation unavailable: ${error.message}`
+        };
     }
 }
