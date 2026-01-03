@@ -121,10 +121,12 @@ export async function translateText(text, profileId = 'natural', customRules = [
 
         const translatedText = translationResult.text;
 
-        // Back-Translation using DeepL
-        // Translate the result back to the source language to verify accuracy
+        // Back-Translation using DeepL with DIRECT/LITERAL mode
+        // Translate the AI result back to the source language to verify what it actually means
         const backTarget = sourceLanguage === 'ko' ? 'ko' : 'en-US';
-        const backTranslationResult = await translator.translateText(translatedText, null, backTarget);
+        // Use prefer_less (literal/direct) for accurate back-translation
+        const backOptions = backTarget === 'ko' ? { formality: 'prefer_less' } : {};
+        const backTranslationResult = await translator.translateText(translatedText, null, backTarget, backOptions);
         const backTranslatedText = backTranslationResult.text;
 
         // Calculate accuracy score using text similarity
@@ -160,16 +162,24 @@ export async function getAlternatives(word, context, sourceLanguage, targetLangu
     ];
 }
 
-// Generate a different variation using DeepL with different settings
+// Generate a different variation of the CURRENT TRANSLATION
+// This works by translating the current translation back and forth with different formality
 export async function generateVariation(originalText, currentTranslation, profileId) {
-    const sourceLanguage = detectLanguage(originalText);
-    const targetLanguage = sourceLanguage === 'ko' ? 'en-US' : 'ko';
+    // Detect language of the CURRENT TRANSLATION (which is opposite of original)
+    const originalLanguage = detectLanguage(originalText);
+    const translationLanguage = originalLanguage === 'ko' ? 'en-US' : 'ko';
+    // For variation, we translate the current translation back to original language, then forward again with different style
+    const backToOriginal = originalLanguage === 'ko' ? 'ko' : 'en-US';
 
     const translator = getDeepL();
 
     try {
-        // Try translating with a different formality to get a variation
-        // Cycle through formality options to get different results
+        // Step 1: Translate the current translation back to original language (direct/literal)
+        const backOptions = backToOriginal === 'ko' ? { formality: 'prefer_less' } : {};
+        const backResult = await translator.translateText(currentTranslation, null, backToOriginal, backOptions);
+        const backText = backResult.text;
+
+        // Step 2: Translate that back to target language with a DIFFERENT formality
         const formalityOptions = ['prefer_less', 'default', 'prefer_more'];
 
         // Find current formality based on profile
@@ -181,22 +191,30 @@ export async function generateVariation(originalText, currentTranslation, profil
         const otherFormalities = formalityOptions.filter(f => f !== currentFormality);
         const newFormality = otherFormalities[Math.floor(Math.random() * otherFormalities.length)];
 
-        let result;
-        try {
-            // Only apply formality when translating TO Korean
-            const options = targetLanguage === 'ko' ? { formality: newFormality } : {};
-            result = await translator.translateText(originalText, null, targetLanguage, options);
-        } catch (e) {
-            result = await translator.translateText(originalText, null, targetLanguage);
-        }
-
+        // Translate with new formality
+        const forwardOptions = translationLanguage === 'ko' ? { formality: newFormality } : {};
+        const result = await translator.translateText(backText, null, translationLanguage, forwardOptions);
         const newTranslation = result.text;
 
         // Check if we actually got a different translation
         if (newTranslation === currentTranslation) {
+            // Try with a different formality
+            const alternateFormality = otherFormalities.find(f => f !== newFormality) || 'default';
+            const altOptions = translationLanguage === 'ko' ? { formality: alternateFormality } : {};
+            const altResult = await translator.translateText(backText, null, translationLanguage, altOptions);
+
+            if (altResult.text !== currentTranslation) {
+                return {
+                    translation: altResult.text,
+                    difference: alternateFormality === 'prefer_more' ? 'More formal/polite variation' :
+                        alternateFormality === 'prefer_less' ? 'More casual/direct variation' :
+                            'Standard formality variation'
+                };
+            }
+
             return {
                 translation: currentTranslation,
-                difference: 'DeepL returned the same translation. Try a different phrase for variations.'
+                difference: 'This translation is already optimal. Try a different phrase.'
             };
         }
 
