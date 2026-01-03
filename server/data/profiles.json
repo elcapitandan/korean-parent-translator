@@ -1,0 +1,12 @@
+[
+  {
+    "id": "custom-1767424962086",
+    "name": "Test Profile",
+    "description": "Test description",
+    "rules": [
+      "Be very happy"
+    ],
+    "isDefault": false,
+    "canDelete": true
+  }
+]

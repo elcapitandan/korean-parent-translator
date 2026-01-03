@@ -54,8 +54,9 @@ npm run dev
    - Click "New +" → "Web Service"
    - Connect your GitHub repo
    - Render auto-detects settings from `render.yaml`
-   - Add environment variable: `GEMINI_API_KEY` = your key
-   - Add environment variable: `DEEPL_API_KEY` = your key (Get one [here](https://www.deepl.com/pro-api))
+   - Add environment variables:
+     - `DEEPL_API_KEY` = your key (Get one [here](https://www.deepl.com/pro-api))
+     - `PERPLEXITY_API_KEY` = your key (Get one [here](https://www.perplexity.ai/settings/api)) - Required for Custom Rules and Variation features
    - Click "Create Web Service"
 
 3. **Access your app** at `https://your-app-name.onrender.com`
