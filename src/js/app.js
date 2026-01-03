@@ -325,6 +325,8 @@ async function generateNewVariation() {
 
     } catch (error) {
         console.error('Variation error:', error);
+        elements.translationNotes.textContent = `Variation failed: ${error.message}`;
+        elements.translationNotes.classList.remove('hidden');
     } finally {
         showLoading(false);
     }
