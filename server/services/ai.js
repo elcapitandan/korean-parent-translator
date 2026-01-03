@@ -42,7 +42,7 @@ function detectLanguage(text) {
 
 // Direct translation using Gemini (for literal/direct accuracy)
 async function translateWithGemini(text, sourceLanguage, targetLanguage) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
     const sourceName = sourceLanguage === 'ko' ? 'Korean' : 'English';
     const targetName = targetLanguage === 'ko' ? 'Korean' : 'English';
 
@@ -174,7 +174,7 @@ export async function translateText(text, profileId = 'natural', customRules = [
 
 // Calculate semantic similarity between original and re-translation using Gemini
 async function calculateAccuracyScore(original, reTranslation, language) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const prompt = `Compare these two texts for semantic similarity. Rate from 0-100 how much meaning is preserved.
 
@@ -203,7 +203,7 @@ Respond with ONLY a JSON object:
 
 // Get alternative translations for a word/phrase using Gemini
 export async function getAlternatives(word, context, sourceLanguage, targetLanguage) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
 
     const sourceName = sourceLanguage === 'ko' ? 'Korean' : 'English';
     const targetName = targetLanguage === 'ko' ? 'Korean' : 'English';
@@ -239,7 +239,7 @@ export async function generateVariation(originalText, currentTranslation, profil
     const targetLanguage = sourceLanguage === 'ko' ? 'English' : 'Korean';
 
     try {
-        const model = getGenAI().getGenerativeModel({ model: 'gemini-1.5-pro' });
+        const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const prompt = `Original text: "${originalText}"
 Current translation: "${currentTranslation}"
