@@ -1,5 +1,4 @@
 import * as deepl from 'deepl-node';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { config } from 'dotenv';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -9,16 +8,8 @@ import { getProfileById, DEFAULT_PROFILES } from './profiles.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: join(__dirname, '../../.env') });
 
-// Initialize clients
-let genAI = null;
+// Initialize DeepL client
 let deeplTranslator = null;
-
-function getGenAI() {
-    if (!genAI) {
-        genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-    }
-    return genAI;
-}
 
 function getDeepL() {
     if (!deeplTranslator) {
@@ -40,118 +31,104 @@ function detectLanguage(text) {
     return koreanChars / totalChars > 0.3 ? 'ko' : 'en';
 }
 
-// Direct translation using Gemini (for literal/direct accuracy)
-async function translateWithGemini(text, sourceLanguage, targetLanguage) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
-    const sourceName = sourceLanguage === 'ko' ? 'Korean' : 'English';
-    const targetName = targetLanguage === 'ko' ? 'Korean' : 'English';
+// Calculate text similarity score (0-100) using token overlap
+function calculateTextSimilarity(original, backTranslation) {
+    const normalize = (text) => text.toLowerCase().replace(/[^\w\s가-힣]/g, '').trim();
+    const tokenize = (text) => normalize(text).split(/\s+/).filter(t => t.length > 0);
 
-    const prompt = `Translate the following ${sourceName} text to ${targetName}.
-Mode: DIRECT / LITERAL.
-Translate word-for-word where possible while keeping the sentence grammatical. 
-Do not add natural fillers or changing the sentence structure unnecessarily.
-Preserve the exact original meaning.
+    const originalTokens = tokenize(original);
+    const backTokens = tokenize(backTranslation);
 
-Text: "${text}"
-
-Respond with ONLY a JSON object:
-{"translation": "the translated text"}`;
-
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
-    try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response);
-        return parsed.translation;
-    } catch {
-        // Fallback: try to clean response
-        return response.replace(/```json/g, '').replace(/```/g, '').trim();
+    if (originalTokens.length === 0 || backTokens.length === 0) {
+        return { score: 0, explanation: 'Unable to compare texts' };
     }
+
+    // Count matching tokens
+    const originalSet = new Set(originalTokens);
+    const backSet = new Set(backTokens);
+
+    let matchCount = 0;
+    for (const token of originalSet) {
+        if (backSet.has(token)) {
+            matchCount++;
+        }
+    }
+
+    // Calculate Jaccard similarity
+    const unionSize = new Set([...originalTokens, ...backTokens]).size;
+    const jaccardScore = (matchCount / unionSize) * 100;
+
+    // Also consider length similarity
+    const lengthRatio = Math.min(originalTokens.length, backTokens.length) /
+        Math.max(originalTokens.length, backTokens.length);
+
+    // Combined score (weighted average)
+    const combinedScore = Math.round((jaccardScore * 0.7) + (lengthRatio * 100 * 0.3));
+
+    let explanation = '';
+    if (combinedScore >= 85) {
+        explanation = 'Excellent semantic preservation';
+    } else if (combinedScore >= 70) {
+        explanation = 'Good meaning retention with minor variations';
+    } else if (combinedScore >= 50) {
+        explanation = 'Moderate similarity - some nuances may differ';
+    } else {
+        explanation = 'Translation may have significant interpretation';
+    }
+
+    return {
+        score: Math.min(100, Math.max(0, combinedScore)),
+        explanation
+    };
 }
 
-// Main translation function
+// Main translation function - DeepL only
 export async function translateText(text, profileId = 'natural', customRules = []) {
     const sourceLanguage = detectLanguage(text);
     const targetLanguage = sourceLanguage === 'ko' ? 'en-US' : 'ko';
 
-    // Special Case: Direct Profile -> Use Gemini for Literal Translation
-    if (profileId === 'direct') {
-        try {
-            console.log('Using Gemini for Direct translation...');
-            const geminiTranslation = await translateWithGemini(text, sourceLanguage, targetLanguage);
-
-            // Back-Translation using DeepL (for consistent checking)
-            const translator = getDeepL();
-            const backTarget = sourceLanguage === 'ko' ? 'ko' : 'en-US';
-            const backTranslationResult = await translator.translateText(geminiTranslation, null, backTarget);
-
-            // Accuracy Score
-            let accuracyScore = null;
-            try {
-                accuracyScore = await calculateAccuracyScore(text, backTranslationResult.text, sourceLanguage);
-            } catch (e) { accuracyScore = { score: 0, explanation: 'Scoring unavailable' }; }
-
-            return {
-                original: text,
-                sourceLanguage,
-                targetLanguage: targetLanguage === 'en-US' ? 'en' : 'ko',
-                translation: geminiTranslation,
-                translationConfidence: 0.9,
-                translationNotes: 'Using Literal/Direct mode (Gemini)',
-                reTranslation: backTranslationResult.text,
-                reTranslationNotes: '',
-                accuracyScore,
-                profileUsed: 'Direct (Gemini)'
-            };
-        } catch (e) {
-            console.error('Gemini Direct Translation Failed:', e);
-            // Fallback to DeepL if Gemini fails
-        }
-    }
-
-    // Default: Use DeepL
     const translator = getDeepL();
 
     // Map profiles to DeepL formality
-    // Natural -> Formal (Elders) -> prefer_more
-    // Parent Talk -> Polite (Standard) -> default
+    // Natural -> Formal (for speaking to elders) -> prefer_more
+    // Parent Talk -> Polite/Standard -> default
+    // Direct -> No formality preference (literal) -> prefer_less
     let formality = 'default';
+    let profileNote = '';
+
     if (profileId === 'natural') {
         formality = 'prefer_more';
+        profileNote = 'Using formal tone for respectful communication';
     } else if (profileId === 'parent-talk') {
-        formality = 'default'; // Usually polite/friendly
+        formality = 'default';
+        profileNote = 'Using standard polite tone';
+    } else if (profileId === 'direct') {
+        formality = 'prefer_less';
+        profileNote = 'Using direct/literal translation style';
     }
 
     try {
         let translationResult;
         try {
-            // Attempt with formality preference
-            translationResult = await translator.translateText(text, null, targetLanguage, {
-                formality: targetLanguage === 'en-US' ? 'default' : formality
-            });
+            // Only apply formality when translating TO Korean (not from Korean to English)
+            const options = targetLanguage === 'ko' ? { formality } : {};
+            translationResult = await translator.translateText(text, null, targetLanguage, options);
         } catch (e) {
             // Fallback if formality not supported
+            console.warn('Formality not supported, using default:', e.message);
             translationResult = await translator.translateText(text, null, targetLanguage);
         }
 
         const translatedText = translationResult.text;
 
         // Back-Translation using DeepL
-        // We want to translate the RESULT back to the SOURCE language to verify accuracy
-        // So if source was 'en', we translate back to 'en-US'. If source was 'ko', back to 'ko'.
+        // Translate the result back to the source language to verify accuracy
         const backTarget = sourceLanguage === 'ko' ? 'ko' : 'en-US';
         const backTranslationResult = await translator.translateText(translatedText, null, backTarget);
         const backTranslatedText = backTranslationResult.text;
 
-        // Calculate accuracy score using Gemini
-        // We make this non-blocking so main translation succeeds even if Gemini fails (quota/errors)
-        let accuracyScore = null;
-        try {
-            accuracyScore = await calculateAccuracyScore(text, backTranslatedText, sourceLanguage);
-        } catch (scoreError) {
-            console.warn('Accuracy scoring failed:', scoreError.message);
-            accuracyScore = { score: 0, explanation: 'Scoring temporarily unavailable' };
-        }
+        // Calculate accuracy score using text similarity
+        const accuracyScore = calculateTextSimilarity(text, backTranslatedText);
 
         return {
             original: text,
@@ -159,7 +136,7 @@ export async function translateText(text, profileId = 'natural', customRules = [
             targetLanguage: targetLanguage === 'en-US' ? 'en' : 'ko',
             translation: translatedText,
             translationConfidence: 1.0,
-            translationNotes: profileId === 'natural' ? 'Using formal tone (DeepL)' : '',
+            translationNotes: profileNote,
             reTranslation: backTranslatedText,
             reTranslationNotes: '',
             accuracyScore,
@@ -172,104 +149,74 @@ export async function translateText(text, profileId = 'natural', customRules = [
     }
 }
 
-// Calculate semantic similarity between original and re-translation using Gemini
-async function calculateAccuracyScore(original, reTranslation, language) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-    const prompt = `Compare these two texts for semantic similarity. Rate from 0-100 how much meaning is preserved.
-
-Original: "${original}"
-Back-translation: "${reTranslation}"
-
-Consider:
-- Core meaning preserved (most important)
-- Nuance and tone preserved
-- Cultural context maintained
-
-Respond with ONLY a JSON object:
-{"score": 85, "explanation": "brief explanation"}`;
-
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
-
-    try {
-        const jsonMatch = response.match(/\{[\s\S]*\}/);
-        const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : response);
-        return { score: parsed.score, explanation: parsed.explanation };
-    } catch {
-        return { score: 75, explanation: 'Unable to calculate precise score' };
-    }
-}
-
-// Get alternative translations for a word/phrase using Gemini
+// Get alternative translations - simplified without Gemini
+// Returns variations by trying different formality settings
 export async function getAlternatives(word, context, sourceLanguage, targetLanguage) {
-    const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
-
-    const sourceName = sourceLanguage === 'ko' ? 'Korean' : 'English';
-    const targetName = targetLanguage === 'ko' ? 'Korean' : 'English';
-
-    const prompt = `Given this ${targetName} word/phrase: "${word}"
-Context: "${context}"
-Original language: ${sourceName}
-
-Provide 5 alternative translations that could work in this context.
-For each alternative, briefly explain the nuance difference.
-
-Respond with ONLY a JSON array:
-[
-  {"text": "alternative1", "nuance": "explanation"},
-  {"text": "alternative2", "nuance": "explanation"}
-]`;
-
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
-
-    try {
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
-        return JSON.parse(jsonMatch ? jsonMatch[0] : '[]');
-    } catch {
-        return [{ text: word, nuance: 'Original translation' }];
-    }
+    // Without Gemini, we can't generate true alternatives
+    // Return a message indicating this feature requires AI
+    return [
+        { text: word, nuance: 'Original translation (DeepL)' },
+        { text: word, nuance: 'Alternative suggestions require AI features' }
+    ];
 }
 
-// Generate a different variation using Gemini
+// Generate a different variation using DeepL with different settings
 export async function generateVariation(originalText, currentTranslation, profileId) {
-    const profile = getProfileById(profileId) || DEFAULT_PROFILES[0];
     const sourceLanguage = detectLanguage(originalText);
-    const targetLanguage = sourceLanguage === 'ko' ? 'English' : 'Korean';
+    const targetLanguage = sourceLanguage === 'ko' ? 'en-US' : 'ko';
+
+    const translator = getDeepL();
 
     try {
-        const model = getGenAI().getGenerativeModel({ model: 'gemini-2.0-flash' });
+        // Try translating with a different formality to get a variation
+        // Cycle through formality options to get different results
+        const formalityOptions = ['prefer_less', 'default', 'prefer_more'];
 
-        const prompt = `Original text: "${originalText}"
-Current translation: "${currentTranslation}"
-Target language: ${targetLanguage}
-Style: ${profile.description}
+        // Find current formality based on profile
+        let currentFormality = 'default';
+        if (profileId === 'natural') currentFormality = 'prefer_more';
+        else if (profileId === 'direct') currentFormality = 'prefer_less';
 
-Generate a DIFFERENT translation that incorporates:
-1. Common ${targetLanguage} idioms, proverbs, or sayings that fit the context
-2. Natural expressions that native speakers would actually use
-3. Cultural nuances and colloquialisms
-4. If translating to Korean: consider 사자성어 (four-character idioms), 속담 (proverbs), or common expressions like 화이팅, 수고하셨습니다, etc.
-5. If translating to English: use equivalent English idioms or casual expressions
+        // Pick a different formality
+        const otherFormalities = formalityOptions.filter(f => f !== currentFormality);
+        const newFormality = otherFormalities[Math.floor(Math.random() * otherFormalities.length)];
 
-The variation should feel MORE natural and culturally authentic than a direct translation.
-
-Respond with ONLY a JSON object:
-{"translation": "the new translation using idioms/common phrases", "difference": "explain the idiom/phrase used and its cultural meaning"}`;
-
-        const result = await model.generateContent(prompt);
-        const response = result.response.text();
-
+        let result;
         try {
-            const jsonMatch = response.match(/\{[\s\S]*\}/);
-            return JSON.parse(jsonMatch ? jsonMatch[0] : response);
-        } catch {
-            return { translation: currentTranslation, difference: 'Could not parse variation' };
+            // Only apply formality when translating TO Korean
+            const options = targetLanguage === 'ko' ? { formality: newFormality } : {};
+            result = await translator.translateText(originalText, null, targetLanguage, options);
+        } catch (e) {
+            result = await translator.translateText(originalText, null, targetLanguage);
         }
+
+        const newTranslation = result.text;
+
+        // Check if we actually got a different translation
+        if (newTranslation === currentTranslation) {
+            return {
+                translation: currentTranslation,
+                difference: 'DeepL returned the same translation. Try a different phrase for variations.'
+            };
+        }
+
+        // Describe the difference
+        let differenceNote = '';
+        if (newFormality === 'prefer_more') {
+            differenceNote = 'More formal/polite variation';
+        } else if (newFormality === 'prefer_less') {
+            differenceNote = 'More casual/direct variation';
+        } else {
+            differenceNote = 'Standard formality variation';
+        }
+
+        return {
+            translation: newTranslation,
+            difference: differenceNote
+        };
+
     } catch (error) {
-        console.error('Gemini Variation Error:', error.message);
-        // Return a fallback instead of throwing
+        console.error('Variation Error:', error.message);
         return {
             translation: currentTranslation,
             difference: `Variation unavailable: ${error.message}`
