@@ -65,6 +65,31 @@
         </div>
         <div class="panel-content">
           <textarea id="input-text" placeholder="Enter Korean or English text to translate..." autofocus></textarea>
+
+          <!-- Custom Rules Section -->
+          <div class="custom-rules-section">
+            <button id="toggle-rules-btn" class="toggle-rules-btn">
+              <svg class="toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+              <span>Custom Rules</span>
+              <span class="rules-count" id="rules-count"></span>
+            </button>
+            <div id="custom-rules-container" class="custom-rules-container hidden">
+              <p class="rules-hint">Add rules to transform how text is interpreted before translation. Each rule on a
+                new line.</p>
+              <textarea id="custom-rules-input" placeholder="Examples:
+• Give it a warm, caring tone
+• Make it more formal and respectful
+• Use happy/positive words
+• Speak as if talking to elderly parents"></textarea>
+              <div class="rules-actions">
+                <button id="save-rules-btn" class="btn btn-small btn-primary">Save Rules</button>
+                <button id="clear-rules-btn" class="btn btn-small btn-ghost">Clear</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="panel-footer">
           <span class="char-count"><span id="char-count">0</span> characters</span>

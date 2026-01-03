@@ -846,6 +846,113 @@ body::before {
 }
 
 /* ================================
+   Custom Rules Section
+   ================================ */
+.custom-rules-section {
+  margin-top: var(--space-lg);
+  border-top: 1px solid var(--border-color);
+  padding-top: var(--space-md);
+}
+
+.toggle-rules-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) 0;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.toggle-rules-btn:hover {
+  color: var(--text-primary);
+}
+
+.toggle-rules-btn .toggle-icon {
+  transition: transform var(--transition-fast);
+}
+
+.toggle-rules-btn.expanded .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.rules-count {
+  margin-left: auto;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--accent-primary);
+  color: white;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.rules-count:empty {
+  display: none;
+}
+
+.custom-rules-container {
+  padding: var(--space-md) 0;
+  animation: slideDown 200ms ease-out;
+}
+
+.custom-rules-container.hidden {
+  display: none;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rules-hint {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+}
+
+.custom-rules-container textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  resize: vertical;
+  transition: all var(--transition-fast);
+}
+
+.custom-rules-container textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.custom-rules-container textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.rules-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+/* ================================
    Responsive Design
    ================================ */
 @media (max-width: 1200px) {

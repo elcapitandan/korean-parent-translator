@@ -6,7 +6,13 @@ import { AlternativesPopup } from './alternatives.js';
 const state = {
     currentTranslation: null,
     selectedProfile: 'natural',
+    customRules: [],
     debounceTimer: null
+};
+
+// Local Storage Keys
+const STORAGE_KEYS = {
+    customRules: 'translator_custom_rules'
 };
 
 // DOM Elements
@@ -27,7 +33,14 @@ const elements = {
     clearBtn: document.getElementById('clear-btn'),
     manageProfilesBtn: document.getElementById('manage-profiles-btn'),
     loadingOverlay: document.getElementById('loading-overlay'),
-    apiStatus: document.getElementById('api-status')
+    apiStatus: document.getElementById('api-status'),
+    // Custom rules elements
+    toggleRulesBtn: document.getElementById('toggle-rules-btn'),
+    customRulesContainer: document.getElementById('custom-rules-container'),
+    customRulesInput: document.getElementById('custom-rules-input'),
+    rulesCount: document.getElementById('rules-count'),
+    saveRulesBtn: document.getElementById('save-rules-btn'),
+    clearRulesBtn: document.getElementById('clear-rules-btn')
 };
 
 // Initialize managers
@@ -36,6 +49,9 @@ const alternativesPopup = new AlternativesPopup();
 
 // Initialize app
 async function init() {
+    // Load saved custom rules
+    loadCustomRules();
+
     // Check API health
     await checkApiStatus();
 
@@ -47,6 +63,52 @@ async function init() {
 
     // Focus input
     elements.inputText.focus();
+}
+
+// Load custom rules from localStorage
+function loadCustomRules() {
+    try {
+        const saved = localStorage.getItem(STORAGE_KEYS.customRules);
+        if (saved) {
+            const rules = JSON.parse(saved);
+            state.customRules = rules;
+            elements.customRulesInput.value = rules.join('\n');
+            updateRulesCount();
+        }
+    } catch (e) {
+        console.error('Failed to load custom rules:', e);
+    }
+}
+
+// Save custom rules to localStorage
+function saveCustomRules() {
+    const text = elements.customRulesInput.value.trim();
+    const rules = text.split('\n')
+        .map(r => r.trim())
+        .filter(r => r.length > 0);
+
+    state.customRules = rules;
+    localStorage.setItem(STORAGE_KEYS.customRules, JSON.stringify(rules));
+    updateRulesCount();
+
+    // Show save confirmation
+    const originalText = elements.saveRulesBtn.textContent;
+    elements.saveRulesBtn.textContent = '✓ Saved!';
+    setTimeout(() => {
+        elements.saveRulesBtn.textContent = originalText;
+    }, 1500);
+
+    // Re-translate with new rules if there's text
+    const inputText = elements.inputText.value.trim();
+    if (inputText) {
+        translateText(inputText);
+    }
+}
+
+// Update rules count badge
+function updateRulesCount() {
+    const count = state.customRules.length;
+    elements.rulesCount.textContent = count > 0 ? count : '';
 }
 
 // Check API connection
@@ -150,6 +212,37 @@ function setupEventListeners() {
     alternativesPopup.onSelect = (selectedText, replacement) => {
         replaceInTranslation(selectedText, replacement);
     };
+
+    // Custom rules toggle
+    elements.toggleRulesBtn.addEventListener('click', () => {
+        const container = elements.customRulesContainer;
+        const isHidden = container.classList.contains('hidden');
+
+        if (isHidden) {
+            container.classList.remove('hidden');
+            elements.toggleRulesBtn.classList.add('expanded');
+        } else {
+            container.classList.add('hidden');
+            elements.toggleRulesBtn.classList.remove('expanded');
+        }
+    });
+
+    // Save rules button
+    elements.saveRulesBtn.addEventListener('click', saveCustomRules);
+
+    // Clear rules button
+    elements.clearRulesBtn.addEventListener('click', () => {
+        elements.customRulesInput.value = '';
+        state.customRules = [];
+        localStorage.removeItem(STORAGE_KEYS.customRules);
+        updateRulesCount();
+
+        // Re-translate without rules if there's text
+        const inputText = elements.inputText.value.trim();
+        if (inputText) {
+            translateText(inputText);
+        }
+    });
 }
 
 // Translate text
@@ -157,7 +250,8 @@ async function translateText(text) {
     showLoading(true);
 
     try {
-        const result = await api.translate(text, state.selectedProfile);
+        // Send custom rules with the translation request
+        const result = await api.translate(text, state.selectedProfile, state.customRules);
         state.currentTranslation = result;
 
         // Update source/target language badges
